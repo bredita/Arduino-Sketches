@@ -83,11 +83,11 @@ void setup() {
 }
 
 void loop() {
+  system_sleep();   // "Normal" deep sleep - will wake up only on interrupts (tilt pin/light pin)
   sendMsg(1,getDoorStatus());  // sensor #1
   sendMsg(2,getLightStatus()); // sensor #2
   sendMsg(0,getBandgap());     // sensor #3 
   deepsleep(20);    // wait a while after sending. No need to jam the garage door opener/car lock. Maybe the interrupts messes with this. Haven't tested.  
-  system_sleep();   // "Normal" deep sleep - will wake up only on interrupts (tilt pin/light pin)
 }
 
 
