@@ -1,21 +1,42 @@
 #include <MANCHESTER.h>
+#include <avr/sleep.h> 
+
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+
 #define TXpin 4          // digital pin the radio is connected to
 #define RXpin 3    
-#define repeatMessage 3  // How many times the 433 radio should send its message
+#define repeatMessage 10  // How many times the 433 radio should send its message
 #define NODE_ID 0        // The ID of this node
 unsigned int readingNum = 0;
 
 void setup() {
   pinMode(TXpin,OUTPUT);
   pinMode(RXpin,INPUT);
+  sbi(GIMSK,PCIE); // Turn on Pin Change interrupt
+  sbi(PCMSK,PCINT3); // Which pins are affected by the Pin Change interrupt   
   MANCHESTER.SetTxPin(TXpin);
 }
 
 void loop() {
-  if(RXpin==HIGH) {
+  if(digitalRead(RXpin)==HIGH) {
     digitalWrite(1,HIGH);
     sendMsg(1,1);
+    delay(5000);
   }
+}
+
+ISR(PCINT0_vect) { // Must have a subroutine to call when the interrupts trigger
+  cbi(GIMSK,PCIE); // Turn on Pin Change interrupt
+  cbi(PCMSK,PCINT3); // Which pins are affected by the Pin Change interrupt   
+    digitalWrite(1,HIGH);
+    sendMsg(1,1);
+  sbi(GIMSK,PCIE); // Turn on Pin Change interrupt
+  sbi(PCMSK,PCINT3); // Which pins are affected by the Pin Change interrupt   
 }
 
 void sendMsg(unsigned int sensornum, unsigned int data)
