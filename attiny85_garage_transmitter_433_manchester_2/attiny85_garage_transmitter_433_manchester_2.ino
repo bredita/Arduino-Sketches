@@ -16,7 +16,7 @@
 #include <MANCHESTER.h> // Radio protocol 
 
 // For the sleep mode/watchdog
-#include <ATTinyWatchdog.h>
+//#include <ATTinyWatchdog.h>
 #include <avr/power.h>
 #include <avr/sleep.h> 
 #ifndef cbi
@@ -39,17 +39,17 @@ const int tiltSensor=0;
 const int lightSensor=1;
 
 // for how long must the sensor reading be stable before it's accepted?
-const int buttonstatedelay= 500;
+const int buttonstatedelay= 60000;
 
 void setup() {
   // Prepare for random pauses
-  randomSeed(analogRead(0));
+  // randomSeed(analogRead(0));
   // Setup watchdog to notify us every 4 seconds
-  ATTINYWATCHDOG.setup(8);
+  //ATTINYWATCHDOG.setup(8);
   // Turn off subsystems which we aren't using
   power_timer0_disable();
   // timer1 used by MANCHESTER
-  power_usi_disable();
+  // power_usi_disable();
   // ADC used for reading a sensor
   // ATTINYWATCHDOG turns off ADC before sleep and
   // restores it when we wake up
@@ -87,12 +87,15 @@ void loop() {
   deepsleep(15);    // sleep one minute after waking up - to let the door open (or close) before transmitting.  
   sendMsg(1,getDoorStatus());  // sensor #1
   sendMsg(2,getLightStatus()); // sensor #2
-  sendMsg(0,getBandgap());     // sensor #3 
 }
 
 
 unsigned int getDoorStatus() {
-  if(stableReading(tiltSensor)==HIGH) {return 1;} // if the tilt sensor is high, and stable, then the door is closed
+  // if the tilt sensor is high, and stable, then the door is closed
+  if(stableReading(tiltSensor)==HIGH) {
+      sendMsg(0,getBandgap());     // getbandgap works with door closed only
+      return 1;
+  } 
   else { return 0; }; // otherwise I assume it's open.
 }
 unsigned int getLightStatus() {
@@ -133,7 +136,7 @@ void deepsleep(unsigned int multiple)
 {
   sleeptx(); 
   // deep sleep for multiple * 4 seconds
-  ATTINYWATCHDOG.sleep(multiple);
+  //ATTINYWATCHDOG.sleep(multiple);
   waketx();
 }
 
@@ -194,7 +197,7 @@ const long InternalReferenceVoltage = 1080;  // Adjust this value to your board'
 //// So for example, 5V would be 500.
 int getBandgap () 
 {
-  analogRead(0);    // neccessary for the voltage meter to work
+  analogRead(1);    // neccessary for the voltage meter to work
   // REFS0 : Selects AVcc external reference
   // MUX3 MUX2 MUX1 : Selects 1.1V (VBG)  
   ADMUX = _BV (REFS0) | _BV (MUX3) | _BV (MUX2) | _BV (MUX1);

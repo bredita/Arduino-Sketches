@@ -7,7 +7,7 @@
  The NRF24L01 radio is connected like so:
  Pin 1 (GND/black)  -> GND
  Pin 2 (VCC/red)    -> 3V (if you feed it 5v it powers off and you have to 
-                           power cycle the board to bring it back)
+ power cycle the board to bring it back)
  Pin 3 (CE/orange)   -> PB1/D9 (can be changed)
  Pin 4 (CSN/green)  -> PB2/D10 (can be changed)
  Pin 5 (SCK/yellow) -> SCK/PB5/D13 (fixed)
@@ -19,33 +19,34 @@
 #define CSNpin 10      // CSN pin of the radio
 
 #define lightSensor A5 // the pin the light sensor (and the resistor 
-                       // to ground) is connected to. The other leg 
-                       // of the sensor goes to ground.
+// to ground) is connected to. The other leg 
+// of the sensor goes to ground.
 #define tempSensor A4  // The middle pin of the temp sensor (and the 
-                       // 18K resistor) goes here. 
-                       // the other two legs go to 5V/GND
+// 18K resistor) goes here. 
+// the other two legs go to 5V/GND
 #define relayPin 8     // The relay "IN1" pin goes here.
-                       // The relay´s VCC and GND go to 5v and GND
+// The relay´s VCC and GND go to 5v and GND
 #define trigPin 7      // The ping sensors trig pin
 #define echoPin 6      // the ping sensors echo pin
-                       // the other two pins on the ping sensor 
-                       // go to 5v/GND
+// the other two pins on the ping sensor 
+// go to 5v/GND
 
 #define NODE_ID 4      // The garage was #1 but I´l give it a new ID 
-                       // in order to be able to run both the new and 
-                       // old box at the same time, for a while.
-                       
+// in order to be able to run both the new and 
+// old box at the same time, for a while.
+
 #include <RF24.h>      // Get it from: https://github.com/stanleyseow/RF24
 #include <SPI.h>
 #include "printf.h"    // needed for the printDetails function. Copy it to 
-                       // your sketch folder.
+// your sketch folder.
 
 
 RF24 radio(CEpin,CSNpin); // nRF24L01(+) radio 
 
 
 //Must use same pipes on both nodes, one of them should have them swapped around)
-const uint64_t pipes[2] = { 0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
+const uint64_t pipes[2] = { 
+  0xF0F0F0F0D2LL, 0xF0F0F0F0E1LL };
 
 // How often to send sensor values
 const unsigned long interval = 30000; //ms
@@ -59,6 +60,7 @@ unsigned long packets_sent;
 // The configured time offset Do I need this for anything?
 unsigned long timeoffset = 0;
 
+unsigned long lastTrigger=0;
 //using the same 5-byte message as on the 433 radios
 typedef struct
 {
@@ -95,7 +97,7 @@ void setup(void)
   radio.setPayloadSize(5);
   radio.setRetries(15,15);
   radio.setChannel(0x18); // channel 24 = my house number and is also
-                          // one of the less polluted channels I found :)
+  // one of the less polluted channels I found :)
   radio.setPALevel(RF24_PA_MAX);
   radio.setAutoAck(true);
   radio.openWritingPipe(pipes[1]);   // first pipe for writing,
@@ -137,7 +139,7 @@ void loop(void)
     else
       printf("Sent tempReading: %i \r\n",tempReading);
 
-    if (sendMsg(1,distanceReading))
+    if (sendMsg(3,distanceReading))
       Serial.println("Sending distanceReading failed.");
     else
       printf("Sent distanceReading: %i \r\n",distanceReading);
@@ -227,17 +229,18 @@ void loop(void)
       Serial.write(" Time:");
       Serial.print(timetxt);
       Serial.write("\r\n");
-      if (nodeID==31 && sensorNum==31) {
+
+      if (nodeID==5 && sensorNum==24  && (millis() - lastTrigger) > 10000) {
         digitalWrite(relayPin,LOW);
         delay(reading);
         digitalWrite(relayPin,HIGH);
         Serial.print("Triggered relay for ");
         Serial.print(reading);
         Serial.println("ms.");
-
-
+        lastTrigger=millis();
       }
     }
+
   }
 }
 
@@ -305,8 +308,8 @@ long microsecondsToCentimeters(long microseconds)
 unsigned int gettemp() {
   unsigned int inVal = analogRead(tempSensor);                // read the value from the sensor
   inVal /= 2;                               // convert 1024 steps into value referenced to +5 volts
-//    Serial.print(inVal);                      // print input value
-//    Serial.print(" Celsius,  ");              // print Celsius label
+  //    Serial.print(inVal);                      // print input value
+  //    Serial.print(" Celsius,  ");              // print Celsius label
   //  Serial.print((inVal * 9)/ 5 + 32);        // convert Celsius to Fahrenheit
   //  Serial.println(" Fahrenheit");            // print Fahrenheit label
 
@@ -342,5 +345,8 @@ bool doSendMsg(int xiData, unsigned int xiSensorNum, unsigned char xiMsgNum)
   return ok;
 
 }
+
+
+
 
 
